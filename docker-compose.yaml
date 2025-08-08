@@ -1,11 +1,11 @@
-version: '3.8'
+#version: '3.8'
 
 services:
   postgres:
     image: postgres:15
     container_name: homelab-postgres
     environment:
-      POSTGRES_DB: sklep_utf8
+      POSTGRES_DB: sklep_backup
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
     volumes:
@@ -18,9 +18,12 @@ services:
     image: n8nio/n8n:latest
     container_name: homelab-n8n
     environment:
-      - N8N_HOST=192.168.1.13
+      - N8N_RUNNERS_ENABLED=true
+      - N8N_HOST=0.0.0.0
       - N8N_PORT=5678
       - N8N_PROTOCOL=http
+      - N8N_SECURE_COOKIE=false
+      - N8N_ENFORCE_SETTINGS_FILE_PERMISSIONS=false
       - DB_TYPE=postgresdb
       - DB_POSTGRESDB_HOST=postgres
       - DB_POSTGRESDB_PORT=5432
