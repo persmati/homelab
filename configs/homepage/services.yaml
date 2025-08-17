@@ -1,0 +1,64 @@
+- E-commerce:
+    - Grafana Analytics:
+        href: http://192.168.1.13:3000
+        description: Business Intelligence & Dashboards
+        icon: grafana.png
+        ping: http://192.168.1.13:3000
+
+    - n8n Automation:
+        href: http://192.168.1.13:5678
+        description: Workflow Automation & Data Sync
+        icon: n8n.png
+        ping: http://192.168.1.13:5678
+
+    - PostgreSQL Admin:
+        href: http://192.168.1.13:5432
+        description: Database Management
+        icon: postgresql.png
+
+    - Shop Dashboard:
+        href: http://192.168.1.13:3000/d/ecommerce
+        description: Today's Business Metrics
+        icon: shopping-cart.png
+
+- Productivity:
+    - Linkding Bookmarks:
+        href: http://192.168.1.13:3003
+        description: Saved Links & Resources
+        icon: linkding.png
+        ping: http://192.168.1.13:3003
+
+    - Uptime Monitor:
+        href: http://192.168.1.13:3002
+        description: Service Status Monitoring
+        icon: uptime-kuma.png
+        ping: http://192.168.1.13:3002
+
+    - IT Tools:
+        href: http://192.168.1.13:3004
+        description: Developer Utilities
+        icon: it-tools.png
+        ping: http://192.168.1.13:3004
+
+- System:
+    - Prometheus Metrics:
+        href: http://192.168.1.13:9090
+        description: System Metrics Collection
+        icon: prometheus.png
+        ping: http://192.168.1.13:9090
+
+    - Node Exporter:
+        href: http://192.168.1.13:9100
+        description: Hardware Metrics
+        icon: folder-network.png
+        ping: http://192.168.1.13:9100
+
+    - Docker Status:
+        href: http://192.168.1.13
+        description: Container Management
+        icon: docker.png
+
+    - System Monitor:
+        href: http://192.168.1.13:3000/d/system
+        description: Hardware Performance
+        icon: server.png

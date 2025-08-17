@@ -1,0 +1,242 @@
+pageInfo:
+  title: "Mati's HomeHub 🚀"
+  description: "Advanced Homelab Command Center"
+  navLinks:
+    - title: GitHub
+      path: https://github.com/persmati/homelab
+      target: _blank
+    - title: VPS
+      path: ssh://194.59.140.170
+    - title: Docs
+      path: https://docs.docker.com
+
+appConfig:
+  theme: matrix # dark, light, colorful, matrix, material-dark
+  layout: auto
+  iconSize: large
+  language: en
+  customColors:
+    primary: '#00ff00'
+    background: '#000000'
+    accent: '#ff6b35'
+  hideComponents:
+    hideFooter: false
+    hideNav: false
+    hideSearch: false
+  startingView: default
+  statusCheck: true
+  statusCheckInterval: 30
+  faviconApi: local
+
+sections:
+  - name: 💼 Business Intelligence
+    icon: fas fa-chart-line
+    displayData:
+      sortBy: name
+      rows: 1
+      cols: 4
+      collapsed: false
+    items:
+      - title: Grafana Analytics
+        description: Real-time business metrics & KPIs
+        url: http://192.168.1.13:3000
+        icon: hl-grafana
+        id: 0_1
+        statusCheck: true
+        tags: [analytics, metrics, business]
+        keywords: dashboard metrics analytics revenue
+        
+      - title: PostgreSQL Database
+        description: Primary data warehouse
+        url: http://192.168.1.13:5432
+        icon: hl-postgres
+        statusCheck: false
+        tags: [database, storage]
+        
+      - title: n8n Workflows
+        description: Business automation & data sync
+        url: http://192.168.1.13:5678
+        icon: hl-n8n
+        statusCheck: true
+        tags: [automation, workflows]
+        
+      - title: Revenue Dashboard
+        description: Today's sales performance
+        url: http://192.168.1.13:3000/d/revenue-dashboard
+        icon: fas fa-dollar-sign
+        statusCheck: true
+        tags: [revenue, sales, kpi]
+
+  - name: 🛠️ Development & Tools
+    icon: fas fa-code
+    displayData:
+      sortBy: name
+      rows: 2
+      cols: 3
+    items:
+      - title: IT Tools Suite
+        description: Developer utilities & converters
+        url: http://192.168.1.13:3004
+        icon: hl-code
+        statusCheck: true
+        tags: [development, tools, utilities]
+        
+      - title: Linkding Bookmarks
+        description: Curated development resources
+        url: http://192.168.1.13:3003
+        icon: hl-linkding
+        statusCheck: true
+        tags: [bookmarks, resources]
+        
+      - title: GitHub Homelab
+        description: Source code repository
+        url: https://github.com/persmati/homelab
+        icon: hl-github
+        target: _blank
+        tags: [source, git, repository]
+        
+      - title: Docker Hub
+        description: Container registry
+        url: https://hub.docker.com
+        icon: hl-docker
+        target: _blank
+        tags: [containers, docker]
+        
+      - title: Portainer
+        description: Container management (future)
+        url: http://192.168.1.13:9000
+        icon: hl-portainer
+        statusCheck: false
+        tags: [containers, management]
+        
+      - title: VS Code Server
+        description: Web-based IDE (future)
+        url: http://192.168.1.13:8080
+        icon: hl-vscode
+        statusCheck: false
+        tags: [ide, development]
+
+  - name: 📊 Infrastructure Monitoring
+    icon: fas fa-server
+    displayData:
+      sortBy: priority
+      rows: 2
+      cols: 3
+    items:
+      - title: Uptime Kuma
+        description: Service availability monitoring
+        url: http://192.168.1.13:3002
+        icon: hl-uptime-kuma
+        statusCheck: true
+        tags: [monitoring, uptime, alerts]
+        priority: 1
+        
+      - title: Prometheus Metrics
+        description: System metrics collection
+        url: http://192.168.1.13:9090
+        icon: hl-prometheus
+        statusCheck: true
+        tags: [metrics, prometheus, monitoring]
+        priority: 2
+        
+      - title: Node Exporter
+        description: Hardware performance metrics
+        url: http://192.168.1.13:9100
+        icon: hl-hardware
+        statusCheck: true
+        tags: [hardware, metrics, system]
+        priority: 3
+        
+      - title: System Overview
+        description: Comprehensive system dashboard
+        url: http://192.168.1.13:3000/d/system-overview
+        icon: fas fa-tachometer-alt
+        statusCheck: true
+        tags: [system, overview, dashboard]
+        priority: 1
+        
+      - title: ThinkPad Stats
+        description: Laptop hardware monitoring
+        url: http://192.168.1.13:3000/d/node-exporter
+        icon: fas fa-laptop
+        statusCheck: true
+        tags: [laptop, hardware, performance]
+        priority: 2
+
+  - name: 🌐 External Services
+    icon: fas fa-cloud
+    displayData:
+      sortBy: name
+      rows: 1
+      cols: 5
+    items:
+      - title: VPS Production
+        description: Live production server
+        url: http://194.59.140.170
+        icon: fas fa-server
+        target: _blank
+        tags: [production, vps, server]
+        
+      - title: Google Analytics
+        description: Website traffic analytics
+        url: https://analytics.google.com
+        icon: hl-google-analytics
+        target: _blank
+        tags: [analytics, traffic, seo]
+        
+      - title: Meta Business
+        description: Facebook Ads management
+        url: https://business.facebook.com
+        icon: hl-facebook
+        target: _blank
+        tags: [ads, marketing, social]
+        
+      - title: Gmail Business
+        description: Business email management
+        url: https://gmail.com
+        icon: hl-gmail
+        target: _blank
+        tags: [email, communication]
+        
+      - title: Google Drive
+        description: Cloud storage & documents
+        url: https://drive.google.com
+        icon: hl-google-drive
+        target: _blank
+        tags: [storage, documents, cloud]
+
+  - name: 🎯 Quick Actions
+    icon: fas fa-bolt
+    displayData:
+      sortBy: name
+      rows: 1
+      cols: 4
+      itemSize: small
+    items:
+      - title: System Restart
+        description: Restart all containers
+        url: http://192.168.1.13:3000/restart
+        icon: fas fa-power-off
+        color: '#ff4757'
+        tags: [action, restart, system]
+        
+      - title: Backup Now
+        description: Trigger manual backup
+        url: http://192.168.1.13:5678/backup
+        icon: fas fa-download
+        color: '#2ed573'
+        tags: [backup, action, data]
+        
+      - title: Log Viewer
+        description: View system logs
+        url: http://192.168.1.13:3000/logs
+        icon: fas fa-file-alt
+        color: '#ffa502'
+        tags: [logs, debug, system]
+        
+      - title: Health Check
+        description: Run system diagnostics
+        url: http://192.168.1.13:3002/health
+        icon: fas fa-heartbeat
+        color: '#3742fa'
+        tags: [health, check, diagnostics]

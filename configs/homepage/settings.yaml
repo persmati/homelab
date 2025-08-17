@@ -1,0 +1,21 @@
+title: "Mati's Command Center"
+favicon: https://github.com/walkxcode/dashboard-icons/blob/main/png/homepage.png
+
+headerStyle: boxed
+color: slate
+target: _blank
+hideVersion: true
+base: http://192.168.1.13:3001
+
+
+layout:
+  E-commerce:
+    style: row
+    columns: 4
+  Productivity:
+    style: row
+    columns: 3
+  System:
+    style: row
+    columns: 4
+

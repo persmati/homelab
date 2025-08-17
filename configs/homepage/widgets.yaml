@@ -1,0 +1,25 @@
+- datetime:
+    text_size: xl
+    format:
+      timeStyle: short
+      dateStyle: short
+
+- search:
+    provider: google
+    target: _blank
+
+- greeting:
+    text_size: xl
+    text: "Witaj, Mati!"
+
+- resources:
+    cpu: true
+    memory: true
+    disk: /
+    expanded: true
+
+- weather:
+    location: Poznań, Poland
+    units: metric
+    provider: openweathermap
+    apiKey: YOUR_API_KEY

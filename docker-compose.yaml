@@ -11,6 +11,8 @@ services:
     ports:
       - "5432:5432"
     restart: unless-stopped
+    networks:
+      - homelab
 
   n8n:
     image: n8nio/n8n:latest
@@ -35,6 +37,8 @@ services:
     depends_on:
       - postgres
     restart: unless-stopped
+    networks:
+      - homelab
 
   grafana:
     image: grafana/grafana:latest
@@ -46,6 +50,8 @@ services:
     volumes:
       - grafana_data:/var/lib/grafana
     restart: unless-stopped
+    networks:
+      - homelab
 
   node-exporter:
     image: prom/node-exporter:latest
@@ -62,6 +68,8 @@ services:
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
     restart: unless-stopped
+    networks:
+      - homelab
 
   prometheus:
     image: prom/prometheus:latest
@@ -72,9 +80,118 @@ services:
       - prometheus_data:/prometheus
       - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
     restart: unless-stopped
+    networks:
+      - homelab
+
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: homelab-heimdall
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Warsaw
+    ports:
+      - "3001:80"
+    volumes:
+      - heimdall_data:/config
+    restart: unless-stopped
+    networks:
+      - homelab
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: homelab-uptime-kuma
+    ports:
+      - "3002:3001"
+    volumes:
+      - uptime_data:/app/data
+    restart: unless-stopped
+    networks:
+      - homelab
+
+  linkding:
+    image: sissbruecker/linkding:latest
+    container_name: homelab-linkding
+    ports:
+      - "3003:9090"
+    volumes:
+      - linkding_data:/etc/linkding/data
+    environment:
+      - LD_SUPERUSER_NAME=admin
+      - LD_SUPERUSER_PASSWORD=admin123
+    restart: unless-stopped
+    networks:
+      - homelab
+
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: homelab-it-tools
+    ports:
+      - "3004:80"
+    restart: unless-stopped
+    networks:
+      - homelab
+
+  pihole:
+    image: pihole/pihole:latest
+    container_name: homelab-pihole
+    environment:
+      TZ: 'Europe/Warsaw'
+      WEBPASSWORD: ${PIHOLE_PASSWORD}
+      SERVERIP: '192.168.1.13'
+      DNS1: '1.1.1.1'
+      DNS2: '8.8.8.8'
+    volumes:
+      - pihole_etc:/etc/pihole
+      - pihole_dnsmasq:/etc/dnsmasq.d
+    restart: unless-stopped
+    network_mode: "host"
+    cap_add:
+      - NET_ADMIN
+
+  wireguard:
+    image: linuxserver/wireguard
+    container_name: homelab-wireguard
+    cap_add:
+      - NET_ADMIN
+      - SYS_MODULE
+    environment:
+      PUID: 1000
+      PGID: 1000
+      TZ: Europe/Warsaw
+      SERVERURL: auto
+      SERVERPORT: 51820
+      PEERS: 3
+      PEERDNS: homelab-pihole  # Use container name instead of IP
+      INTERNAL_SUBNET: 10.13.13.0
+    volumes:
+      - wireguard_config:/config
+      - /lib/modules:/lib/modules
+    ports:
+      - "51820:51820/udp"
+    sysctls:
+      - net.ipv4.conf.all.src_valid_mark=1
+    restart: unless-stopped
+    networks:
+      - homelab
+    depends_on:
+      - pihole
+
+networks:
+  homelab:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16
 
 volumes:
   postgres_data:
   n8n_data:
   grafana_data:
   prometheus_data:
+  uptime_data:
+  linkding_data:
+  heimdall_data:
+  pihole_etc:
+  pihole_dnsmasq:
+  wireguard_config:
