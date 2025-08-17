@@ -14,6 +14,42 @@ services:
     networks:
       - homelab
 
+  traefik:
+    image: traefik:v3.0
+    container_name: homelab-traefik
+    command:
+      - "--api.dashboard=true"
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8080:8080"  # Traefik dashboard
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    networks:
+      - homelab
+    restart: unless-stopped
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: homelab-grafana
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.grafana.rule=Host(`grafana.lab`)"
+      - "traefik.http.routers.grafana.entrypoints=web"
+      - "traefik.http.services.grafana.loadbalancer.server.port=3000"
+
   n8n:
     image: n8nio/n8n:latest
     container_name: homelab-n8n
@@ -30,8 +66,6 @@ services:
       - DB_POSTGRESDB_DATABASE=n8n_workflows
       - DB_POSTGRESDB_USER=postgres
       - DB_POSTGRESDB_PASSWORD=${POSTGRES_PASSWORD}
-    ports:
-      - "5678:5678"
     volumes:
       - n8n_data:/home/node/.n8n
     depends_on:
@@ -39,98 +73,11 @@ services:
     restart: unless-stopped
     networks:
       - homelab
-
-  grafana:
-    image: grafana/grafana:latest
-    container_name: homelab-grafana
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD}
-    ports:
-      - "3000:3000"
-    volumes:
-      - grafana_data:/var/lib/grafana
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  node-exporter:
-    image: prom/node-exporter:latest
-    container_name: homelab-node-exporter
-    ports:
-      - "9100:9100"
-    volumes:
-      - /proc:/host/proc:ro
-      - /sys:/host/sys:ro
-      - /:/rootfs:ro
-    command:
-      - '--path.procfs=/host/proc'
-      - '--path.rootfs=/rootfs'
-      - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  prometheus:
-    image: prom/prometheus:latest
-    container_name: homelab-prometheus
-    ports:
-      - "9090:9090"
-    volumes:
-      - prometheus_data:/prometheus
-      - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  heimdall:
-    image: lscr.io/linuxserver/heimdall:latest
-    container_name: homelab-heimdall
-    environment:
-      - PUID=1000
-      - PGID=1000
-      - TZ=Europe/Warsaw
-    ports:
-      - "3001:80"
-    volumes:
-      - heimdall_data:/config
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  uptime-kuma:
-    image: louislam/uptime-kuma:latest
-    container_name: homelab-uptime-kuma
-    ports:
-      - "3002:3001"
-    volumes:
-      - uptime_data:/app/data
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  linkding:
-    image: sissbruecker/linkding:latest
-    container_name: homelab-linkding
-    ports:
-      - "3003:9090"
-    volumes:
-      - linkding_data:/etc/linkding/data
-    environment:
-      - LD_SUPERUSER_NAME=admin
-      - LD_SUPERUSER_PASSWORD=admin123
-    restart: unless-stopped
-    networks:
-      - homelab
-
-  it-tools:
-    image: corentinth/it-tools:latest
-    container_name: homelab-it-tools
-    ports:
-      - "3004:80"
-    restart: unless-stopped
-    networks:
-      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.n8n.rule=Host(`n8n.lab`)"
+      - "traefik.http.routers.n8n.entrypoints=web"
+      - "traefik.http.services.n8n.loadbalancer.server.port=5678"
 
   pihole:
     image: pihole/pihole:latest
@@ -176,6 +123,98 @@ services:
       - homelab
     depends_on:
       - pihole
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: homelab-prometheus
+    volumes:
+      - prometheus_data:/prometheus
+      - ./configs/prometheus/prometheus.yaml:/etc/prometheus/prometheus.yml:ro
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.prometheus.rule=Host(`prometheus.lab`)"
+      - "traefik.http.routers.prometheus.entrypoints=web"
+      - "traefik.http.services.prometheus.loadbalancer.server.port=9090"
+
+  heimdall:
+    image: lscr.io/linuxserver/heimdall:latest
+    container_name: homelab-heimdall
+    environment:
+      - PUID=1000
+      - PGID=1000
+      - TZ=Europe/Warsaw
+    volumes:
+      - heimdall_data:/config
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.heimdall.rule=Host(`heimdall.lab`) || Host(`dashboard.lab`)"
+      - "traefik.http.routers.heimdall.entrypoints=web"
+      - "traefik.http.services.heimdall.loadbalancer.server.port=80"
+
+  uptime-kuma:
+    image: louislam/uptime-kuma:latest
+    container_name: homelab-uptime-kuma
+    volumes:
+      - uptime_data:/app/data
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.uptime.rule=Host(`uptime.lab`)"
+      - "traefik.http.routers.uptime.entrypoints=web"
+      - "traefik.http.services.uptime.loadbalancer.server.port=3001"
+
+  linkding:
+    image: sissbruecker/linkding:latest
+    container_name: homelab-linkding
+    volumes:
+      - linkding_data:/etc/linkding/data
+    environment:
+      - LD_SUPERUSER_NAME=admin
+      - LD_SUPERUSER_PASSWORD=admin123
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.linkding.rule=Host(`bookmarks.lab`)"
+      - "traefik.http.routers.linkding.entrypoints=web"
+      - "traefik.http.services.linkding.loadbalancer.server.port=9090"
+
+  it-tools:
+    image: corentinth/it-tools:latest
+    container_name: homelab-it-tools
+    restart: unless-stopped
+    networks:
+      - homelab
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.ittools.rule=Host(`tools.lab`)"
+      - "traefik.http.routers.ittools.entrypoints=web"
+      - "traefik.http.services.ittools.loadbalancer.server.port=80"
+
+  node-exporter:
+    image: prom/node-exporter:latest
+    container_name: homelab-node-exporter
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.rootfs=/rootfs'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    restart: unless-stopped
+    networks:
+      - homelab
 
 networks:
   homelab:
