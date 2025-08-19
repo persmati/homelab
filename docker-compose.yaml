@@ -27,7 +27,7 @@ services:
     ports:
       - "80:80"
       - "443:443"
-      - "8080:8080"  # Traefik dashboard
+      - "8080:8080"
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
     networks:
@@ -88,9 +88,11 @@ services:
       SERVERIP: '192.168.1.13'
       DNS1: '1.1.1.1'
       DNS2: '8.8.8.8'
+      FTLCONF_webserver_port: 8081  # Force web server to use port 808
     volumes:
       - pihole_etc:/etc/pihole
       - pihole_dnsmasq:/etc/dnsmasq.d
+      - ./configs/pihole/pihole.toml:/etc/pihole/pihole.toml:ro  # Custom config
     restart: unless-stopped
     network_mode: "host"
     cap_add:
@@ -109,7 +111,7 @@ services:
       SERVERURL: auto
       SERVERPORT: 51820
       PEERS: 3
-      PEERDNS: homelab-pihole  # Use container name instead of IP
+      PEERDNS: homelab-pihole
       INTERNAL_SUBNET: 10.13.13.0
     volumes:
       - wireguard_config:/config
@@ -211,10 +213,127 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.rootfs=/rootfs'
       - '--path.sysfs=/host/sys'
-      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($|/)'
     restart: unless-stopped
     networks:
       - homelab
+
+  # NEW MICROSERVICE
+  microservice-order:
+    build:
+      context: ./microservice_mail
+      dockerfile: ./services/order-service/Dockerfile
+    container_name: homelab-microservice-order
+    ports:
+      - "5001:5001"
+    env_file:
+      - ./microservice_mail/.env
+    volumes:
+      - microservice_logs:/var/log/microservice_mail
+      - microservice_cache:/app/cache
+    networks:
+      - homelab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5001/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.microservice-order.rule=Host(`orders.lab`)"
+      - "traefik.http.routers.microservice-order.entrypoints=web"
+      - "traefik.http.services.microservice-order.loadbalancer.server.port=5001"
+
+  microservice-file:
+    build:
+      context: ./microservice_mail
+      dockerfile: ./services/file-service/Dockerfile
+    container_name: homelab-microservice-file
+    ports:
+      - "5002:5002"
+    env_file:
+      - ./microservice_mail/.env
+    volumes:
+      - ./microservice_mail/shared/drive-gmail_service.json:/app/drive-gmail_service.json:ro
+      - microservice_logs:/var/log/microservice_mail
+      - microservice_cache:/app/cache
+    networks:
+      - homelab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5002/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.microservice-file.rule=Host(`files.lab`)"
+      - "traefik.http.routers.microservice-file.entrypoints=web"
+      - "traefik.http.services.microservice-file.loadbalancer.server.port=5002"
+
+  microservice-email:
+    build:
+      context: ./microservice_mail
+      dockerfile: ./services/email-service/Dockerfile
+    container_name: homelab-microservice-email
+    ports:
+      - "5003:5003"
+    env_file:
+      - ./microservice_mail/.env
+    volumes:
+      - microservice_logs:/var/log/microservice_mail
+      - microservice_cache:/app/cache
+    networks:
+      - homelab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5003/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.microservice-email.rule=Host(`mail.lab`)"
+      - "traefik.http.routers.microservice-email.entrypoints=web"
+      - "traefik.http.services.microservice-email.loadbalancer.server.port=5003"
+
+  microservice-orchestrator:
+    build:
+      context: ./microservice_mail
+      dockerfile: ./orchestrator/Dockerfile
+    container_name: homelab-microservice-orchestrator
+    ports:
+      - "5000:5000"
+    env_file:
+      - ./microservice_mail/.env
+    depends_on:
+      microservice-order:
+        condition: service_healthy
+      microservice-file:
+        condition: service_healthy
+      microservice-email:
+        condition: service_healthy
+    volumes:
+      - microservice_logs:/var/log/microservice_mail
+      - microservice_cache:/app/cache
+    networks:
+      - homelab
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:5000/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.microservice-main.rule=Host(`microservice.lab`)"
+      - "traefik.http.routers.microservice-main.entrypoints=web"
+      - "traefik.http.services.microservice-main.loadbalancer.server.port=5000"
 
 networks:
   homelab:
@@ -234,3 +353,5 @@ volumes:
   pihole_etc:
   pihole_dnsmasq:
   wireguard_config:
+  microservice_logs:
+  microservice_cache:
