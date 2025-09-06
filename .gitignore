@@ -4,3 +4,4 @@ drive-gmail_service.json
 venv/
 .claude
 logs/
+*.pyc
