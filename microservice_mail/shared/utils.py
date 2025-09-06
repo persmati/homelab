@@ -2,7 +2,8 @@ import functools
 import time
 import logging
 from typing import Any, Callable, Dict, Optional, TypeVar, Union
-from flask import jsonify, request
+from fastapi import HTTPException, Request
+from pydantic import BaseModel
 import requests
 
 T = TypeVar('T')
@@ -43,46 +44,39 @@ def retry_on_failure(max_retries: int = 3, delay: float = 1.0, backoff: float = 
 
 def validate_request_data(required_fields: list, optional_fields: list = None):
     """
-    Flask decorator to validate incoming JSON request data.
+    FastAPI/Pydantic compatible request data validator.
+    This function is now mainly for legacy compatibility.
+    In FastAPI, use Pydantic models for validation instead.
     
     Args:
         required_fields: List of field names that must be present
         optional_fields: List of field names that are optional
     """
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            if not request.is_json:
-                return jsonify({
-                    "success": False, 
-                    "error": "Request must be JSON"
-                }), 400
-            
-            data = request.get_json()
-            if not data:
-                return jsonify({
-                    "success": False, 
-                    "error": "Request body cannot be empty"
-                }), 400
-            
-            # Check required fields
-            missing_fields = [field for field in required_fields if field not in data or data[field] is None]
-            if missing_fields:
-                return jsonify({
-                    "success": False,
-                    "error": f"Missing required fields: {', '.join(missing_fields)}"
-                }), 400
-            
-            # Check for unexpected fields if optional_fields is provided
-            if optional_fields is not None:
-                all_allowed = set(required_fields + optional_fields)
-                unexpected_fields = [field for field in data.keys() if field not in all_allowed]
-                if unexpected_fields:
-                    logging.warning(f"Unexpected fields in request: {', '.join(unexpected_fields)}")
-            
-            return func(*args, **kwargs)
-        return wrapper
-    return decorator
+    def validate_data(data: dict) -> dict:
+        if not data:
+            raise HTTPException(
+                status_code=400, 
+                detail="Request body cannot be empty"
+            )
+        
+        # Check required fields
+        missing_fields = [field for field in required_fields if field not in data or data[field] is None]
+        if missing_fields:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Missing required fields: {', '.join(missing_fields)}"
+            )
+        
+        # Check for unexpected fields if optional_fields is provided
+        if optional_fields is not None:
+            all_allowed = set(required_fields + optional_fields)
+            unexpected_fields = [field for field in data.keys() if field not in all_allowed]
+            if unexpected_fields:
+                logging.warning(f"Unexpected fields in request: {', '.join(unexpected_fields)}")
+        
+        return data
+    
+    return validate_data
 
 
 def safe_request(url: str, method: str = 'GET', timeout: int = 30, **kwargs) -> Optional[requests.Response]:

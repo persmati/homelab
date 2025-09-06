@@ -229,6 +229,7 @@ services:
     env_file:
       - ./microservice_mail/.env
     volumes:
+      - ./microservice_mail/shared/drive-gmail_service.json:/app/drive-gmail_service.json:ro
       - microservice_logs:/var/log/microservice_mail
       - microservice_cache:/app/cache
     networks:
@@ -284,8 +285,10 @@ services:
     env_file:
       - ./microservice_mail/.env
     volumes:
+      - ./microservice_mail/shared/drive-gmail_service.json:/app/drive-gmail_service.json:ro
       - microservice_logs:/var/log/microservice_mail
       - microservice_cache:/app/cache
+      - ./logs:/var/log/microservice
     networks:
       - homelab
     restart: unless-stopped

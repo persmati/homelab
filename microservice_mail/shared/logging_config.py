@@ -5,6 +5,7 @@ import sys
 from pathlib import Path
 from typing import Optional
 
+from fastapi import FastAPI
 from .config import LoggingConfig
 
 
@@ -66,23 +67,56 @@ class LoggerSetup:
             logger.addHandler(console_handler)
         
         return logger
-    
+
     @staticmethod
-    def setup_flask_logging(app, config: LoggingConfig, service_name: str):
-        """Setup Flask application logging."""
-        # Remove default Flask handlers
-        for handler in app.logger.handlers[:]:
-            app.logger.removeHandler(handler)
+    def setup_fastapi_logging(app: FastAPI, config: LoggingConfig, service_name: str):
+        """Setup FastAPI application logging."""
+        import uvicorn.logging
         
-        # Setup custom logger for Flask
+        # Setup custom logger for the service
         logger = LoggerSetup.setup_logger(
-            f"flask.{service_name}",
+            f"fastapi.{service_name}",
             config,
             f"{service_name}.log"
         )
         
-        # Set Flask app logger
-        app.logger = logger
-        app.logger.setLevel(getattr(logging, config.log_level.upper()))
+        # Configure uvicorn loggers to use our format
+        uvicorn_loggers = [
+            "uvicorn.error",
+            "uvicorn.access",
+            "uvicorn"
+        ]
+        
+        for logger_name in uvicorn_loggers:
+            uvicorn_logger = logging.getLogger(logger_name)
+            # Clear existing handlers
+            uvicorn_logger.handlers.clear()
+            
+            # Add our custom handlers
+            formatter = logging.Formatter(config.log_format)
+            
+            # File handler for uvicorn logs
+            log_path = Path(config.log_dir) / f"uvicorn_{service_name}.log"
+            file_handler = logging.handlers.RotatingFileHandler(
+                log_path,
+                maxBytes=10 * 1024 * 1024,  # 10MB
+                backupCount=5,
+                encoding='utf-8'
+            )
+            file_handler.setFormatter(formatter)
+            uvicorn_logger.addHandler(file_handler)
+            
+            # Console handler
+            console_handler = logging.StreamHandler(sys.stdout)
+            console_handler.setFormatter(formatter)
+            uvicorn_logger.addHandler(console_handler)
+            
+            uvicorn_logger.setLevel(getattr(logging, config.log_level.upper()))
+            uvicorn_logger.propagate = False
         
         return logger
+
+    @staticmethod
+    def get_logger(name: str) -> logging.Logger:
+        """Get an existing logger by name."""
+        return logging.getLogger(name)

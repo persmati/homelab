@@ -1,12 +1,14 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 import requests
 import json
 import datetime
 import logging
 import sys
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from dotenv import load_dotenv
+import uvicorn
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -15,7 +17,12 @@ load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from shared.config import AppConfig
 
-app = Flask(__name__)
+app = FastAPI()
+
+# Pydantic models for request validation
+class UpdateStatusRequest(BaseModel):
+    order_ids: List[str]
+    status_id: Optional[str] = None
 
 class OrderService:
     def __init__(self, config: AppConfig):
@@ -122,30 +129,26 @@ class OrderService:
 config = AppConfig.from_env()
 order_service = OrderService(config)
 
-@app.route('/health', methods=['GET'])
+@app.get('/health')
 def health_check():
-    return jsonify({"status": "healthy", "service": "order-service"})
+    return {"status": "healthy", "service": "order-service"}
 
-@app.route('/orders/check', methods=['GET'])
-def check_orders():
-    days_ago = request.args.get('days_ago', 3, type=int)
+@app.get('/orders/check')
+def check_orders(days_ago: int = 3):
     has_new_orders = order_service.check_for_new_orders(days_ago)
-    return jsonify({"has_new_orders": has_new_orders})
+    return {"has_new_orders": has_new_orders}
 
-@app.route('/orders/details', methods=['GET'])
-def get_orders():
-    days_ago = request.args.get('days_ago', 3, type=int)
+@app.get('/orders/details')
+def get_orders(days_ago: int = 3):
     order_details = order_service.get_order_details(days_ago)
-    return jsonify(order_details)
+    return order_details
 
-@app.route('/orders/status', methods=['POST'])
-def update_status():
-    data = request.json
-    order_ids = data.get('order_ids', [])
-    new_status = data.get('status_id', config.baselinker.processed_status_id)
+@app.post('/orders/status')
+def update_status(request_data: UpdateStatusRequest):
+    new_status = request_data.status_id or config.baselinker.processed_status_id
     
-    success = order_service.update_order_status(order_ids, new_status)
-    return jsonify({"success": success})
+    success = order_service.update_order_status(request_data.order_ids, new_status)
+    return {"success": success}
 
 if __name__ == '__main__':
     # Setup logging
@@ -160,4 +163,10 @@ if __name__ == '__main__':
         sys.exit(1)
         
     logging.info("Starting order service...")
-    app.run(host='0.0.0.0', port=5001, debug=config.environment.debug)
+    uvicorn.run(
+        "app:app",
+        host='0.0.0.0', 
+        port=5001, 
+        reload=True,
+        log_level="info" if not config.environment.debug else "debug"
+    )

@@ -1,4 +1,5 @@
-from flask import Flask, jsonify
+from fastapi import FastAPI, Response
+import uvicorn
 import requests
 import logging
 import sys
@@ -14,7 +15,7 @@ from shared.config import AppConfig
 from shared.models import OrderData, FileData, ServiceResponse
 from shared.logging_config import LoggerSetup
 
-app = Flask(__name__)
+app = FastAPI()
 
 class OrderOrchestrator:
     def __init__(self, config: AppConfig):
@@ -200,17 +201,20 @@ class OrderOrchestrator:
 config = AppConfig.from_env()
 orchestrator = OrderOrchestrator(config)
 
-@app.route('/health', methods=['GET'])
+@app.get('/health')
 def health_check():
-    return jsonify({"status": "healthy", "service": "orchestrator"})
+    return {"status": "healthy", "service": "orchestrator"}
 
-@app.route('/process', methods=['POST'])
+@app.post('/process')
 def process_orders():
     result = orchestrator.process_orders()
-    status_code = 200 if result["success"] else 500
-    return jsonify(result), status_code
+    if result["success"]:
+        return result
+    else:
+        from fastapi import HTTPException
+        raise HTTPException(status_code=500, detail=result)
 
-@app.route('/services/health', methods=['GET'])
+@app.get('/services/health')
 def check_all_services():
     services = {
         "order-service": config.services.order_service_url,
@@ -223,21 +227,20 @@ def check_all_services():
         health_status[service_name] = orchestrator.check_service_health(service_url)
     
     all_healthy = all(health_status.values())
-    return jsonify({
+    return {
         "overall_health": "healthy" if all_healthy else "unhealthy",
         "services": health_status
-    })
+    }
 
 if __name__ == '__main__':
     try:
-        # Setup Flask application logging
-        LoggerSetup.setup_flask_logging(app, config.logging, 'orchestrator')
-        
         orchestrator.logger.info("Starting order orchestrator service...")
-        app.run(
+        uvicorn.run(
+            "app:app",
             host='0.0.0.0', 
             port=config.services.orchestrator_port, 
-            debug=config.environment.debug
+            reload=True,
+            log_level="info" if not config.environment.debug else "debug"
         )
     except Exception as e:
         if 'orchestrator' in locals():

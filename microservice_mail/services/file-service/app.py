@@ -1,11 +1,13 @@
-from flask import Flask, request, jsonify
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
 import logging
 import sys
 import os
-from typing import Dict, List, Tuple
+from typing import Dict, List, Tuple, Optional
 from dotenv import load_dotenv
+import uvicorn
 
 # Load environment variables from .env file
 load_dotenv(os.path.join(os.path.dirname(__file__), '..', '..', '.env'))
@@ -15,7 +17,12 @@ sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 from shared.config import AppConfig
 from shared.cache import cache_drive_search
 
-app = Flask(__name__)
+app = FastAPI()
+
+# Pydantic models for request validation
+class CheckFilesRequest(BaseModel):
+    required_files: List[str]
+    share_email: Optional[str] = None
 
 class FileService:
     def __init__(self, config: AppConfig):
@@ -138,31 +145,28 @@ class FileService:
 config = AppConfig.from_env()
 file_service = FileService(config)
 
-@app.route('/health', methods=['GET'])
+@app.get('/health')
 def health_check():
-    return jsonify({"status": "healthy", "service": "file-service"})
+    return {"status": "healthy", "service": "file-service"}
 
-@app.route('/files/check', methods=['POST'])
-def check_files():
-    data = request.json
-    required_files = data.get('required_files', [])
-    share_email = data.get('share_email', config.google_drive.share_email)
+@app.post('/files/check')
+def check_files(request_data: CheckFilesRequest):
+    share_email = request_data.share_email or config.google_drive.share_email
     
-    available_files, missing_files = file_service.get_drive_files(required_files, share_email)
+    available_files, missing_files = file_service.get_drive_files(request_data.required_files, share_email)
     
-    return jsonify({
+    return {
         "available_files": available_files,
         "missing_files": missing_files,
         "total_found": len(available_files)
-    })
+    }
 
-@app.route('/files/format', methods=['GET'])
-def get_format():
-    filename = request.args.get('filename', '')
+@app.get('/files/format')
+def get_format(filename: str = ''):
     format_info = file_service.get_format_info(filename)
-    return jsonify({"filename": filename, "format_info": format_info})
+    return {"filename": filename, "format_info": format_info}
 
-@app.route('/files/cache/clear', methods=['POST'])
+@app.post('/files/cache/clear')
 def clear_cache():
     """Clear the Google Drive file cache."""
     try:
@@ -176,19 +180,19 @@ def clear_cache():
             shutil.rmtree(cache_dir)
             cache_dir.mkdir(exist_ok=True)
         
-        return jsonify({"success": True, "message": "Cache cleared successfully"})
+        return {"success": True, "message": "Cache cleared successfully"}
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        raise HTTPException(status_code=500, detail={"success": False, "error": str(e)})
 
-@app.route('/files/cache/stats', methods=['GET'])
+@app.get('/files/cache/stats')
 def cache_stats():
     """Get cache statistics."""
     try:
         from shared.cache import memory_cache
         stats = memory_cache.stats()
-        return jsonify({"success": True, "cache_stats": stats})
+        return {"success": True, "cache_stats": stats}
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)}), 500
+        raise HTTPException(status_code=500, detail={"success": False, "error": str(e)})
 
 if __name__ == '__main__':
     # Setup logging
@@ -203,4 +207,10 @@ if __name__ == '__main__':
         sys.exit(1)
         
     logging.info("Starting file service...")
-    app.run(host='0.0.0.0', port=5002, debug=config.environment.debug)
+    uvicorn.run(
+        "app:app",
+        host='0.0.0.0', 
+        port=5002, 
+        reload=True,
+        log_level="info" if not config.environment.debug else "debug"
+    )

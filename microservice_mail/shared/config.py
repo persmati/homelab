@@ -57,6 +57,7 @@ class EmailConfig:
     gmail_password: str = field(default_factory=lambda: os.getenv('EMAIL_GMAIL_PASSWORD', ''))
     print_email: str = field(default_factory=lambda: os.getenv('EMAIL_PRINT_EMAIL', ''))
     admin_email: str = field(default_factory=lambda: os.getenv('EMAIL_ADMIN_EMAIL', ''))
+    recipient_email: str = field(default_factory=lambda: os.getenv('RECIPIENT_EMAIL', ''))
 
     def __post_init__(self):
         if not self.gmail_user:
